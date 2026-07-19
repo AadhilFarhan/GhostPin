@@ -37,6 +37,9 @@ macOS has no "always on top." The moment you click into another app, the window 
 
 Watch a tutorial in the corner while you code full-screen. Keep the Zoom call visible while you take notes. Watch a build log while you work on something else.
 
+> [!NOTE]
+> GhostPin asks for the macOS Screen Recording permission because its live mirrors work by reading window pixels — **nothing is ever recorded, stored, or uploaded**. The app has no networking code and runs entirely offline. [Details below](#why-does-ghostpin-need-screen-recording-access).
+
 ---
 
 ## Features
