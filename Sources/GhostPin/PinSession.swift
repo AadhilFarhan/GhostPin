@@ -138,7 +138,8 @@ final class PinSession: NSObject {
         }
         positionBadge()
         badgeEye?.image = NSImage(systemSymbolName: isGhost ? "eye.fill" : "eye.slash",
-                                  accessibilityDescription: isGhost ? "Turn off click-through" : "Turn on click-through")
+                                  accessibilityDescription: isGhost ? "Turn off click-through" : "Turn on click-through")?
+            .withSymbolConfiguration(Self.badgeSymbolConfig)
         badgeEye?.toolTip = isGhost ? "Turn off click-through (⌥⌘G)" : "Turn on click-through (⌥⌘G)"
         badge?.contentView?.layer?.backgroundColor = isGhost
             ? NSColor.controlAccentColor.cgColor
@@ -175,27 +176,28 @@ final class PinSession: NSObject {
         container.layer?.cornerRadius = height / 2
         container.layer?.masksToBounds = true
 
-        let eye = badgeButton(action: #selector(badgeTapped))
+        let eye = badgeButton(action: #selector(badgeTapped),
+                              frame: NSRect(x: 0, y: 0, width: width / 2, height: height))
         badgeEye = eye
-        let unpin = badgeButton(action: #selector(badgeUnpinTapped))
-        unpin.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Unpin")
+        let unpin = badgeButton(action: #selector(badgeUnpinTapped),
+                                frame: NSRect(x: width / 2, y: 0, width: width / 2, height: height))
+        unpin.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Unpin")?
+            .withSymbolConfiguration(Self.badgeSymbolConfig)
         unpin.toolTip = "Unpin"
 
-        let stack = NSStackView(views: [eye, unpin])
-        stack.orientation = .horizontal
-        stack.distribution = .fillEqually
-        stack.spacing = 0
-        stack.frame = container.bounds
-        stack.autoresizingMask = [.width, .height]
-        container.addSubview(stack)
+        container.addSubview(eye)
+        container.addSubview(unpin)
         badge.contentView = container
         return badge
     }
 
-    private func badgeButton(action: Selector) -> NSButton {
-        let button = NSButton()
+    private static let badgeSymbolConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+
+    private func badgeButton(action: Selector, frame: NSRect) -> NSButton {
+        let button = NSButton(frame: frame)
         button.isBordered = false
         button.bezelStyle = .regularSquare
+        button.imagePosition = .imageOnly
         button.contentTintColor = .white
         button.target = self
         button.action = action
