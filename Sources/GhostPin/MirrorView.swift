@@ -20,6 +20,9 @@ final class MirrorView: NSView {
     private let hintContainer = NSView()
     private let hintLabel = NSTextField(labelWithString: "")
     private var hintDismissal: DispatchWorkItem?
+    private var overrideActive = false
+    private var dragStartMouse = NSPoint.zero
+    private var dragStartOrigin = NSPoint.zero
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -55,7 +58,29 @@ final class MirrorView: NSView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    override var mouseDownCanMoveWindow: Bool { true }
+    // During the Option-hold override the window is moved manually rather than
+    // through the system drag session: an Option-drag handled by the system
+    // triggers macOS's window-tiling overlay.
+    override var mouseDownCanMoveWindow: Bool { !overrideActive }
+
+    override func mouseDown(with event: NSEvent) {
+        guard overrideActive, let window else {
+            super.mouseDown(with: event)
+            return
+        }
+        dragStartMouse = NSEvent.mouseLocation
+        dragStartOrigin = window.frame.origin
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard overrideActive, let window else {
+            super.mouseDragged(with: event)
+            return
+        }
+        let current = NSEvent.mouseLocation
+        window.setFrameOrigin(NSPoint(x: dragStartOrigin.x + current.x - dragStartMouse.x,
+                                      y: dragStartOrigin.y + current.y - dragStartMouse.y))
+    }
 
     // MARK: - Frames
 
@@ -79,6 +104,7 @@ final class MirrorView: NSView {
     /// Option is held while ghosted: reveal the controls so the mirror can be
     /// manipulated; hide them again on release.
     func setInteractionOverride(_ active: Bool) {
+        overrideActive = active
         layer?.borderColor = active
             ? NSColor.controlAccentColor.cgColor
             : NSColor.controlAccentColor.withAlphaComponent(0.85).cgColor
