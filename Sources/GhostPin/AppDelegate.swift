@@ -35,13 +35,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let pinned = PinManager.shared.sessions
         if !pinned.isEmpty {
-            menu.addItem(sectionHeader("Pinned — click to unpin"))
+            menu.addItem(sectionHeader("Pinned"))
             for session in pinned {
                 let item = NSMenuItem(title: menuTitle(app: session.appName, title: session.title),
-                                      action: #selector(unpinItem(_:)), keyEquivalent: "")
-                item.target = self
-                item.state = .on
-                item.representedObject = session.windowID
+                                      action: nil, keyEquivalent: "")
+                item.state = session.isGhost ? .mixed : .on
+                let submenu = NSMenu()
+                let ghost = NSMenuItem(title: "Ghost Mode (click-through)",
+                                       action: #selector(toggleGhostForPin(_:)), keyEquivalent: "")
+                ghost.target = self
+                ghost.state = session.isGhost ? .on : .off
+                ghost.representedObject = session.windowID
+                submenu.addItem(ghost)
+                let unpin = NSMenuItem(title: "Unpin", action: #selector(unpinItem(_:)), keyEquivalent: "")
+                unpin.target = self
+                unpin.representedObject = session.windowID
+                submenu.addItem(unpin)
+                item.submenu = submenu
                 menu.addItem(item)
             }
             menu.addItem(.separator())
@@ -107,6 +117,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func unpinItem(_ sender: NSMenuItem) {
         guard let windowID = sender.representedObject as? CGWindowID else { return }
         PinManager.shared.toggle(windowID: windowID)
+    }
+
+    @objc private func toggleGhostForPin(_ sender: NSMenuItem) {
+        guard let windowID = sender.representedObject as? CGWindowID else { return }
+        PinManager.shared.toggleGhost(windowID: windowID)
     }
 
     @objc private func pinFrontmostItem() { AppDelegate.pinFrontmost() }

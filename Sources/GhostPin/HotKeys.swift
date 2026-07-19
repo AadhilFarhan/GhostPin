@@ -17,7 +17,7 @@ final class HotKeyCenter {
         var ref: EventHotKeyRef?
         let hotKeyID = EventHotKeyID(signature: OSType(0x47_48_50_4E), id: id) // 'GHPN'
         RegisterEventHotKey(UInt32(keyCode), UInt32(cmdKey | optionKey), hotKeyID,
-                            GetApplicationEventTarget(), 0, &ref)
+                            GetEventDispatcherTarget(), 0, &ref)
     }
 
     private func installIfNeeded() {
@@ -25,7 +25,7 @@ final class HotKeyCenter {
         installed = true
         var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard),
                                  eventKind: UInt32(kEventHotKeyPressed))
-        InstallEventHandler(GetApplicationEventTarget(), { _, event, userData in
+        InstallEventHandler(GetEventDispatcherTarget(), { _, event, userData in
             guard let event, let userData else { return noErr }
             var hotKeyID = EventHotKeyID()
             GetEventParameter(event, EventParamName(kEventParamDirectObject),
