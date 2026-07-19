@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GhostPin — Pin any window on top. Ghost it when it's in the way.</title>
+<meta name="description" content="GhostPin keeps a live, always-on-top mirror of any macOS window floating over your work — with click-through ghost mode. Free and open source.">
+<link rel="icon" type="image/png" href="icon-256.png">
+<style>
+  :root {
+    --bg: #0a0c14;
+    --bg-raised: #121522;
+    --bg-card: #151929;
+    --border: rgba(255,255,255,.09);
+    --text: #eef1f8;
+    --text-dim: #9aa3b8;
+    --accent-1: #4fd1ff;
+    --accent-2: #2f7bff;
+    --accent-grad: linear-gradient(120deg, var(--accent-1), var(--accent-2));
+    --radius: 14px;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7fb;
+      --bg-raised: #ffffff;
+      --bg-card: #ffffff;
+      --border: rgba(20,30,60,.12);
+      --text: #171c2b;
+      --text-dim: #5a6478;
+      color-scheme: light;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent-1); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent-1);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  /* Hero */
+  .hero { padding: 88px 0 64px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before {
+    content: "";
+    position: absolute; inset: -40% -20% auto;
+    height: 130%;
+    background: radial-gradient(ellipse at 50% 0%, rgba(47,123,255,.18), transparent 65%);
+    pointer-events: none;
+  }
+  .hero > .wrap { position: relative; }
+  .hero img.icon { width: 128px; height: 128px; filter: drop-shadow(0 18px 40px rgba(47,123,255,.35)); }
+  .hero h1 {
+    font-size: clamp(2.4rem, 6vw, 3.6rem);
+    font-weight: 800;
+    letter-spacing: -.02em;
+    margin: 20px 0 10px;
+  }
+  .hero .tagline {
+    font-size: clamp(1.1rem, 2.6vw, 1.35rem);
+    font-weight: 600;
+    background: var(--accent-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 14px;
+  }
+  .hero .sub { color: var(--text-dim); max-width: 560px; margin: 0 auto 32px; }
+  .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 26px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: transform .15s ease-out, box-shadow .15s ease-out;
+  }
+  .btn:hover { text-decoration: none; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-primary {
+    background: var(--accent-grad);
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(47,123,255,.35);
+  }
+  .btn-primary:hover { box-shadow: 0 10px 28px rgba(47,123,255,.45); }
+  .btn-ghost {
+    border: 1px solid var(--border);
+    color: var(--text);
+    background: var(--bg-raised);
+  }
+  .meta-note { margin-top: 16px; font-size: .85rem; color: var(--text-dim); }
+
+  /* Demo strip */
+  .demo { margin: 8px auto 0; max-width: 720px; position: relative; }
+  .demo .stage {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 26px;
+    text-align: left;
+    overflow: hidden;
+    position: relative;
+    min-height: 210px;
+  }
+  .fake-window {
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-raised);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  .fake-window .bar { display: flex; gap: 6px; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  .fake-window .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+  .editor { width: 78%; }
+  .editor .body { padding: 14px 16px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .8rem; color: var(--text-dim); }
+  .editor .body .kw { color: var(--accent-2); }
+  .editor .body .str { color: #58c986; }
+  .mirror {
+    position: absolute; right: 26px; bottom: 26px;
+    width: 218px;
+    border: 1.5px solid var(--accent-1);
+    background: linear-gradient(150deg, rgba(79,209,255,.22), rgba(47,123,255,.22));
+    opacity: .92;
+    backdrop-filter: blur(2px);
+  }
+  .mirror .body { padding: 12px 14px; font-size: .8rem; }
+  .mirror .play {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--accent-grad);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: .75rem;
+    margin: 6px auto 8px;
+  }
+  .mirror .label { text-align: center; color: var(--text-dim); font-size: .72rem; }
+  .mirror .pin-badge {
+    position: absolute; top: -12px; right: -10px;
+    background: var(--accent-grad); color: #fff;
+    border-radius: 50%; width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .85rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,.4);
+  }
+
+  /* Sections */
+  section { padding: 64px 0; }
+  section h2 {
+    font-size: clamp(1.6rem, 4vw, 2.1rem);
+    letter-spacing: -.01em;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  section .lede { color: var(--text-dim); text-align: center; max-width: 620px; margin: 0 auto 40px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+  .card .emoji { font-size: 1.5rem; }
+  .card h3 { margin: 10px 0 6px; font-size: 1.05rem; }
+  .card p { color: var(--text-dim); font-size: .92rem; }
+
+  /* Hotkeys */
+  .hotkeys { max-width: 520px; margin: 0 auto; }
+  .hotkey-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+  kbd {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 7px;
+    padding: 4px 11px;
+    font-size: .95rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .hotkey-row span { color: var(--text-dim); font-size: .95rem; }
+
+  /* How it works */
+  .how { max-width: 660px; margin: 0 auto; color: var(--text-dim); }
+  .how p + p { margin-top: 14px; }
+  .how strong { color: var(--text); }
+
+  /* Install */
+  .steps { max-width: 620px; margin: 0 auto; counter-reset: step; }
+  .step {
+    display: flex; gap: 16px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .step:last-child { border-bottom: none; }
+  .step .num {
+    counter-increment: step;
+    flex: 0 0 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--accent-grad);
+    color: #fff; font-weight: 700; font-size: .9rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step .num::before { content: counter(step); }
+  .step h3 { font-size: 1rem; margin-bottom: 3px; }
+  .step p { color: var(--text-dim); font-size: .92rem; }
+  .step code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: .85em;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1px 6px;
+  }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 36px 0 48px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: .9rem;
+  }
+  footer .links { display: flex; gap: 22px; justify-content: center; margin-bottom: 14px; flex-wrap: wrap; }
+
+  @media (max-width: 560px) {
+    .mirror { width: 160px; right: 14px; bottom: 14px; }
+    .editor { width: 92%; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <img class="icon" src="icon-256.png" alt="GhostPin app icon" width="128" height="128">
+    <h1>GhostPin</h1>
+    <p class="tagline">Pin any window on top. Ghost it when it's in the way.</p>
+    <p class="sub">A free, open-source macOS menu bar app that keeps a live mirror of any window floating above your work — with click-through ghost mode.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/AadhilFarhan/GhostPin/releases/latest">↓&nbsp; Download for macOS</a>
+      <a class="btn btn-ghost" href="https://github.com/AadhilFarhan/GhostPin">View on GitHub</a>
+    </div>
+    <p class="meta-note">Free · Open source (MIT) · macOS 14+ · No network access, ever</p>
+
+    <div class="demo" aria-hidden="true">
+      <div class="stage">
+        <div class="fake-window editor">
+          <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          <div class="body">
+            <div><span class="kw">func</span> buildTheThing() {</div>
+            <div>&nbsp;&nbsp;<span class="kw">let</span> result = follow(<span class="str">"the tutorial"</span>)</div>
+            <div>&nbsp;&nbsp;ship(result)</div>
+            <div>}</div>
+          </div>
+        </div>
+        <div class="fake-window mirror">
+          <div class="pin-badge">📌</div>
+          <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          <div class="body">
+            <div class="play">▶</div>
+            <div class="label">tutorial keeps playing — pinned &amp; click-through</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section id="features">
+    <div class="wrap">
+      <h2>Why GhostPin</h2>
+      <p class="lede">macOS has no "always on top." Click into another app and the window you were watching disappears. GhostPin keeps it in sight.</p>
+      <div class="grid">
+        <div class="card">
+          <div class="emoji">📌</div>
+          <h3>Pin any window</h3>
+          <p>Pick any open window from the menu bar — video, call, terminal, chat. A floating mirror stays above every app, every Space, even full-screen apps.</p>
+        </div>
+        <div class="card">
+          <div class="emoji">🎞️</div>
+          <h3>Live, not a snapshot</h3>
+          <p>Powered by Apple's ScreenCaptureKit: a real-time stream at up to 30 fps, GPU-composited. The source can be buried or on another desktop — the mirror keeps playing.</p>
+        </div>
+        <div class="card">
+          <div class="emoji">👻</div>
+          <h3>Ghost mode</h3>
+          <p>One hotkey makes the mirror semi-transparent and click-through. See it, but click and type straight through it into the app underneath.</p>
+        </div>
+        <div class="card">
+          <div class="emoji">↔️</div>
+          <h3>Any size, anywhere</h3>
+          <p>Drag it anywhere, resize from any edge with the aspect ratio locked, double-click to flip between thumbnail and large, dial in opacity from the hover controls.</p>
+        </div>
+        <div class="card">
+          <div class="emoji">⌨️</div>
+          <h3>Global hotkeys</h3>
+          <p>Pin the frontmost window, toggle ghost mode, or clear everything without touching the mouse — and without needing the Accessibility permission.</p>
+        </div>
+        <div class="card">
+          <div class="emoji">🔒</div>
+          <h3>Private by design</h3>
+          <p>Zero network code. Frames go from capture straight to your screen — nothing recorded, stored, or uploaded. All source public under MIT.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="hotkeys">
+    <div class="wrap">
+      <h2>Three hotkeys, whole app</h2>
+      <p class="lede">They work system-wide, whatever app you're in.</p>
+      <div class="hotkeys">
+        <div class="hotkey-row"><kbd>⌥ ⌘ P</kbd><span>Pin / unpin the frontmost window</span></div>
+        <div class="hotkey-row"><kbd>⌥ ⌘ G</kbd><span>Ghost mode — click-through all pins</span></div>
+        <div class="hotkey-row"><kbd>⌥ ⌘ U</kbd><span>Unpin everything</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <div class="how">
+        <p>Apple provides no public way to force another app's window to stay on top — that's an OS restriction, not a missing feature. GhostPin doesn't fight it. Instead of moving the target window, it streams a live capture of it into a small floating panel that GhostPin fully controls: always on top, optionally transparent, optionally click-through.</p>
+        <p>The one honest trade-off: <strong>the mirror is view-only.</strong> To pause the video or reply to the chat, click the original window as usual — the mirror reflects it instantly. That trade is exactly what makes the whole thing possible without private APIs or hacks.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Install in two minutes</h2>
+      <p class="lede">GhostPin isn't notarized by Apple yet, so first launch takes one extra step.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="num"></div>
+          <div><h3>Download and drag to Applications</h3>
+          <p>Get the <a href="https://github.com/AadhilFarhan/GhostPin/releases/latest">latest .dmg</a>, open it, and drag GhostPin into Applications.</p></div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div><h3>Allow the app to open</h3>
+          <p>Double-click GhostPin, dismiss the warning, then go to <code>System Settings → Privacy &amp; Security</code> and click <strong>Open Anyway</strong>. One time only.</p></div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div><h3>Grant Screen Recording</h3>
+          <p>Approve the prompt, enable GhostPin under <code>Screen &amp; System Audio Recording</code>, and reopen the app. The pin appears in your menu bar — pin your first window.</p></div>
+        </div>
+      </div>
+      <div class="cta-row" style="margin-top:36px">
+        <a class="btn btn-primary" href="https://github.com/AadhilFarhan/GhostPin/releases/latest">↓&nbsp; Download GhostPin</a>
+      </div>
+      <p class="meta-note" style="text-align:center">Prefer to compile it yourself? <a href="https://github.com/AadhilFarhan/GhostPin#build-from-source">Build from source</a> in under a minute — no Xcode needed.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="links">
+      <a href="https://github.com/AadhilFarhan/GhostPin">GitHub</a>
+      <a href="https://github.com/AadhilFarhan/GhostPin/releases">Releases</a>
+      <a href="https://github.com/AadhilFarhan/GhostPin/issues">Report an issue</a>
+      <a href="https://github.com/AadhilFarhan/GhostPin/blob/main/LICENSE">MIT License</a>
+    </div>
+    <p>Made by <a href="https://github.com/AadhilFarhan">Aadhil Farhan</a> · GhostPin never records, stores, or uploads anything.</p>
+  </div>
+</footer>
+
+</body>
+</html>
