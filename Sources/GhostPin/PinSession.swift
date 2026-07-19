@@ -24,6 +24,7 @@ final class PinSession: NSObject {
     private var closed = false
 
     var onClosed: ((PinSession) -> Void)?
+    private var badge: NSPanel?
 
     init(scWindow: SCWindow, cascadeIndex: Int) {
         windowID = scWindow.windowID
@@ -112,6 +113,62 @@ final class PinSession: NSObject {
         panel.ignoresMouseEvents = on
         panel.alphaValue = on ? min(baseAlpha, 0.65) : baseAlpha
         mirrorView.setGhostAppearance(on)
+        if on {
+            showBadge()
+            mirrorView.flashHint("Click-through on — tap the eye badge or ⌥⌘G to turn off")
+        } else {
+            hideBadge()
+        }
+    }
+
+    // MARK: - Ghost badge
+    // The ghosted panel ignores every mouse event, so its escape hatch lives in
+    // a separate tiny child window that stays clickable.
+
+    private func showBadge() {
+        if badge == nil { badge = makeBadge() }
+        guard let badge else { return }
+        badge.setFrameOrigin(NSPoint(x: panel.frame.maxX - 22, y: panel.frame.maxY - 22))
+        panel.addChildWindow(badge, ordered: .above)
+        badge.orderFront(nil)
+    }
+
+    private func hideBadge() {
+        guard let badge else { return }
+        panel.removeChildWindow(badge)
+        badge.orderOut(nil)
+    }
+
+    private func makeBadge() -> NSPanel {
+        let size: CGFloat = 28
+        let badge = NSPanel(contentRect: NSRect(x: 0, y: 0, width: size, height: size),
+                            styleMask: [.borderless, .nonactivatingPanel],
+                            backing: .buffered, defer: false)
+        badge.level = panel.level
+        badge.collectionBehavior = panel.collectionBehavior
+        badge.isOpaque = false
+        badge.backgroundColor = .clear
+        badge.hasShadow = true
+        badge.ignoresMouseEvents = false
+        badge.becomesKeyOnlyIfNeeded = true
+
+        let button = NSButton(frame: NSRect(x: 0, y: 0, width: size, height: size))
+        button.isBordered = false
+        button.bezelStyle = .regularSquare
+        button.image = NSImage(systemSymbolName: "eye.fill", accessibilityDescription: "Turn off click-through")
+        button.contentTintColor = .white
+        button.wantsLayer = true
+        button.layer?.backgroundColor = NSColor.controlAccentColor.cgColor
+        button.layer?.cornerRadius = size / 2
+        button.toolTip = "Turn off click-through (⌥⌘G)"
+        button.target = self
+        button.action = #selector(badgeTapped)
+        badge.contentView = button
+        return badge
+    }
+
+    @objc private func badgeTapped() {
+        setGhost(false)
     }
 
     func close() {
@@ -119,6 +176,7 @@ final class PinSession: NSObject {
         closed = true
         stream?.stopCapture()
         stream = nil
+        hideBadge()
         panel.orderOut(nil)
         onClosed?(self)
     }

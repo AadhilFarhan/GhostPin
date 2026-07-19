@@ -53,6 +53,8 @@ GhostPin uses Apple's ScreenCaptureKit to stream the window at up to 30 fps, GPU
 
 The signature feature. Press <kbd>⌥⌘G</kbd> and every pinned mirror becomes semi-transparent and **click-through** — your mouse acts like the mirror isn't there. Watch the video *and* click the button underneath it. An accent border shows when a mirror is in ghost mode; press <kbd>⌥⌘G</kbd> again to make it solid.
 
+Need to move or resize a ghosted mirror? Every ghosted mirror carries a small **eye badge on its top-right corner** — the one spot that stays clickable. Tap it and the mirror turns solid so you can drag, resize, or adjust it, then tap the eye icon in its control strip to ghost it again. A hint appears the moment a mirror enters ghost mode, so there's nothing to memorize.
+
 ### Size and opacity
 
 Drag the mirror anywhere. Resize it from any edge — it keeps the source's aspect ratio. Double-click to flip between thumbnail and large. Hover for a control strip with a ghost toggle, opacity slider, and unpin button.
@@ -185,7 +187,7 @@ GhostPin runs entirely on your Mac and contains no networking code. Captured fra
 
 - The mirror is **view-only** — interact with the original window, not the mirror
 - DRM-protected content (Netflix, Apple TV+) may render black in the mirror, as it does in all screen capture
-- Ghost mode makes the mirror's own controls unreachable by design — use <kbd>⌥⌘G</kbd> to toggle back
+- Ghost mode makes the mirror's surface untouchable while active — use the corner eye badge or <kbd>⌥⌘G</kbd> to toggle back
 
 ---
 
