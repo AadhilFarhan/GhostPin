@@ -25,6 +25,7 @@ final class PinSession: NSObject {
 
     var onClosed: ((PinSession) -> Void)?
     private var badge: NSPanel?
+    private var badgeEye: NSButton?
 
     init(scWindow: SCWindow, cascadeIndex: Int) {
         windowID = scWindow.windowID
@@ -124,9 +125,10 @@ final class PinSession: NSObject {
         }
     }
 
-    // MARK: - Ghost badge
-    // A ghosted panel ignores every mouse event, so the click-through toggle
-    // lives in a separate tiny child window that always stays clickable.
+    // MARK: - Corner controls
+    // A ghosted panel ignores every mouse event, so these live in a separate
+    // tiny child window that always stays clickable: an eye that toggles
+    // click-through, and an X that unpins.
 
     private func updateBadge() {
         if badge == nil {
@@ -135,19 +137,19 @@ final class PinSession: NSObject {
             panel.addChildWindow(badge, ordered: .above)
         }
         positionBadge()
-        if let button = badge?.contentView as? NSButton {
-            button.image = NSImage(systemSymbolName: isGhost ? "eye.fill" : "eye.slash",
-                                   accessibilityDescription: isGhost ? "Turn off click-through" : "Turn on click-through")
-            button.layer?.backgroundColor = isGhost
-                ? NSColor.controlAccentColor.cgColor
-                : NSColor(calibratedWhite: 0.22, alpha: 0.92).cgColor
-            button.toolTip = isGhost ? "Turn off click-through (⌥⌘G)" : "Turn on click-through (⌥⌘G)"
-        }
+        badgeEye?.image = NSImage(systemSymbolName: isGhost ? "eye.fill" : "eye.slash",
+                                  accessibilityDescription: isGhost ? "Turn off click-through" : "Turn on click-through")
+        badgeEye?.toolTip = isGhost ? "Turn off click-through (⌥⌘G)" : "Turn on click-through (⌥⌘G)"
+        badge?.contentView?.layer?.backgroundColor = isGhost
+            ? NSColor.controlAccentColor.cgColor
+            : NSColor(calibratedWhite: 0.22, alpha: 0.92).cgColor
         badge?.orderFront(nil)
     }
 
     private func positionBadge() {
-        badge?.setFrameOrigin(NSPoint(x: panel.frame.maxX - 22, y: panel.frame.maxY - 22))
+        guard let badge else { return }
+        badge.setFrameOrigin(NSPoint(x: panel.frame.maxX - badge.frame.width + 14,
+                                     y: panel.frame.maxY - 22))
     }
 
     @objc private func panelFrameChanged(_ note: Notification) {
@@ -155,8 +157,9 @@ final class PinSession: NSObject {
     }
 
     private func makeBadge() -> NSPanel {
-        let size: CGFloat = 28
-        let badge = NSPanel(contentRect: NSRect(x: 0, y: 0, width: size, height: size),
+        let width: CGFloat = 58
+        let height: CGFloat = 28
+        let badge = NSPanel(contentRect: NSRect(x: 0, y: 0, width: width, height: height),
                             styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
         badge.level = panel.level
@@ -167,20 +170,44 @@ final class PinSession: NSObject {
         badge.ignoresMouseEvents = false
         badge.becomesKeyOnlyIfNeeded = true
 
-        let button = NSButton(frame: NSRect(x: 0, y: 0, width: size, height: size))
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: width, height: height))
+        container.wantsLayer = true
+        container.layer?.cornerRadius = height / 2
+        container.layer?.masksToBounds = true
+
+        let eye = badgeButton(action: #selector(badgeTapped))
+        badgeEye = eye
+        let unpin = badgeButton(action: #selector(badgeUnpinTapped))
+        unpin.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Unpin")
+        unpin.toolTip = "Unpin"
+
+        let stack = NSStackView(views: [eye, unpin])
+        stack.orientation = .horizontal
+        stack.distribution = .fillEqually
+        stack.spacing = 0
+        stack.frame = container.bounds
+        stack.autoresizingMask = [.width, .height]
+        container.addSubview(stack)
+        badge.contentView = container
+        return badge
+    }
+
+    private func badgeButton(action: Selector) -> NSButton {
+        let button = NSButton()
         button.isBordered = false
         button.bezelStyle = .regularSquare
         button.contentTintColor = .white
-        button.wantsLayer = true
-        button.layer?.cornerRadius = size / 2
         button.target = self
-        button.action = #selector(badgeTapped)
-        badge.contentView = button
-        return badge
+        button.action = action
+        return button
     }
 
     @objc private func badgeTapped() {
         setGhost(!isGhost)
+    }
+
+    @objc private func badgeUnpinTapped() {
+        close()
     }
 
     func close() {

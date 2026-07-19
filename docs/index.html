@@ -148,11 +148,12 @@
   .mirror .eye-badge {
     position: absolute; top: -12px; right: -10px;
     background: var(--accent-grad);
-    border-radius: 50%; width: 28px; height: 28px;
-    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px; height: 24px; padding: 0 9px;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
     box-shadow: 0 4px 12px rgba(0,0,0,.4);
   }
   .mirror .eye-badge svg { display: block; }
+  .mirror .eye-badge .x { color: #fff; font-weight: 700; font-size: .8rem; line-height: 1; }
 
   /* Sections */
   section { padding: 64px 0; }
@@ -282,8 +283,9 @@
           </div>
         </div>
         <div class="fake-window mirror">
-          <div class="eye-badge" title="Toggle click-through">
-            <svg width="14" height="14" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" fill="#fff"/><circle cx="12" cy="12" r="3.2" fill="#2f7bff"/></svg>
+          <div class="eye-badge" title="Click-through toggle and unpin">
+            <svg width="13" height="13" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" fill="#fff"/><circle cx="12" cy="12" r="3.2" fill="#2f7bff"/></svg>
+            <span class="x">✕</span>
           </div>
           <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
           <div class="body">

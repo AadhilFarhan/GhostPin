@@ -56,7 +56,7 @@ GhostPin uses Apple's ScreenCaptureKit to stream the window at up to 30 fps, GPU
 
 The signature feature. Press <kbd>⌥⌘G</kbd> and every pinned mirror becomes semi-transparent and **click-through** — your mouse acts like the mirror isn't there. Watch the video *and* click the button underneath it. An accent border shows when a mirror is in ghost mode; press <kbd>⌥⌘G</kbd> again to make it solid.
 
-Every mirror carries a small **eye badge on its top-right corner** that toggles click-through with one click — dark when the mirror is solid, accent-colored when it's ghosted. On a ghosted mirror the badge is the one spot that stays clickable, so you're never locked out: tap it, and the mirror turns solid for dragging and resizing. A hint appears the moment a mirror enters ghost mode, so there's nothing to memorize.
+Every mirror carries a small pill of **corner controls**: an eye that toggles click-through and an ✕ that unpins, one click each, no menu trip. The pill is dark while the mirror is solid and accent-colored while it's ghosted — and it's the one spot that stays clickable on a ghosted mirror, so you're never locked out. A hint appears the moment a mirror enters ghost mode, so there's nothing to memorize.
 
 ### Size and opacity
 
