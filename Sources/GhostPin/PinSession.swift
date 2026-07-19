@@ -24,7 +24,7 @@ final class PinSession: NSObject {
     private var closed = false
 
     var onClosed: ((PinSession) -> Void)?
-    var onGhostChanged: (() -> Void)?
+    private var badge: NSPanel?
 
     init(scWindow: SCWindow, cascadeIndex: Int) {
         windowID = scWindow.windowID
@@ -69,6 +69,11 @@ final class PinSession: NSObject {
         mirrorView.sourceAspect = sourceAspect
 
         panel.orderFrontRegardless()
+        updateBadge()
+        NotificationCenter.default.addObserver(self, selector: #selector(panelFrameChanged),
+                                               name: NSWindow.didResizeNotification, object: panel)
+        NotificationCenter.default.addObserver(self, selector: #selector(panelFrameChanged),
+                                               name: NSWindow.didMoveNotification, object: panel)
         startCapture(scWindow: scWindow)
     }
 
@@ -113,24 +118,81 @@ final class PinSession: NSObject {
         panel.ignoresMouseEvents = on
         panel.alphaValue = on ? min(baseAlpha, 0.65) : baseAlpha
         mirrorView.setGhostAppearance(on)
-        if on { mirrorView.flashHint("Hold ⌥ to interact  ·  ⌥⌘G to unghost") }
-        onGhostChanged?()
+        updateBadge()
+        if on {
+            mirrorView.flashHint("Click-through on — tap the eye badge or ⌥⌘G to turn off")
+        }
     }
 
-    /// While ghosted, temporarily lifts click-through (Option held) so the
-    /// mirror can be moved, resized, or unghosted from its controls.
-    func setInteractionOverride(_ active: Bool) {
-        guard isGhost else { return }
-        panel.ignoresMouseEvents = !active
-        panel.alphaValue = active ? min(baseAlpha, 0.9) : min(baseAlpha, 0.65)
-        mirrorView.setInteractionOverride(active)
+    // MARK: - Ghost badge
+    // A ghosted panel ignores every mouse event, so the click-through toggle
+    // lives in a separate tiny child window that always stays clickable.
+
+    private func updateBadge() {
+        if badge == nil {
+            let badge = makeBadge()
+            self.badge = badge
+            panel.addChildWindow(badge, ordered: .above)
+        }
+        positionBadge()
+        if let button = badge?.contentView as? NSButton {
+            button.image = NSImage(systemSymbolName: isGhost ? "eye.fill" : "eye.slash",
+                                   accessibilityDescription: isGhost ? "Turn off click-through" : "Turn on click-through")
+            button.layer?.backgroundColor = isGhost
+                ? NSColor.controlAccentColor.cgColor
+                : NSColor(calibratedWhite: 0.22, alpha: 0.92).cgColor
+            button.toolTip = isGhost ? "Turn off click-through (⌥⌘G)" : "Turn on click-through (⌥⌘G)"
+        }
+        badge?.orderFront(nil)
+    }
+
+    private func positionBadge() {
+        badge?.setFrameOrigin(NSPoint(x: panel.frame.maxX - 22, y: panel.frame.maxY - 22))
+    }
+
+    @objc private func panelFrameChanged(_ note: Notification) {
+        positionBadge()
+    }
+
+    private func makeBadge() -> NSPanel {
+        let size: CGFloat = 28
+        let badge = NSPanel(contentRect: NSRect(x: 0, y: 0, width: size, height: size),
+                            styleMask: [.borderless, .nonactivatingPanel],
+                            backing: .buffered, defer: false)
+        badge.level = panel.level
+        badge.collectionBehavior = panel.collectionBehavior
+        badge.isOpaque = false
+        badge.backgroundColor = .clear
+        badge.hasShadow = true
+        badge.ignoresMouseEvents = false
+        badge.becomesKeyOnlyIfNeeded = true
+
+        let button = NSButton(frame: NSRect(x: 0, y: 0, width: size, height: size))
+        button.isBordered = false
+        button.bezelStyle = .regularSquare
+        button.contentTintColor = .white
+        button.wantsLayer = true
+        button.layer?.cornerRadius = size / 2
+        button.target = self
+        button.action = #selector(badgeTapped)
+        badge.contentView = button
+        return badge
+    }
+
+    @objc private func badgeTapped() {
+        setGhost(!isGhost)
     }
 
     func close() {
         guard !closed else { return }
         closed = true
+        NotificationCenter.default.removeObserver(self)
         stream?.stopCapture()
         stream = nil
+        if let badge {
+            panel.removeChildWindow(badge)
+            badge.orderOut(nil)
+        }
         panel.orderOut(nil)
         onClosed?(self)
     }

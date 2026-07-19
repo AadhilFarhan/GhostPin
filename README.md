@@ -37,6 +37,9 @@ macOS has no "always on top." The moment you click into another app, the window 
 
 Watch a tutorial in the corner while you code full-screen. Keep the Zoom call visible while you take notes. Watch a build log while you work on something else.
 
+> [!NOTE]
+> GhostPin asks for the macOS Screen Recording permission because its live mirrors work by reading window pixels — **nothing is ever recorded, stored, or uploaded**. The app has no networking code and runs entirely offline. [Details below](#why-does-ghostpin-need-screen-recording-access).
+
 ---
 
 ## Features
@@ -53,7 +56,7 @@ GhostPin uses Apple's ScreenCaptureKit to stream the window at up to 30 fps, GPU
 
 The signature feature. Press <kbd>⌥⌘G</kbd> and every pinned mirror becomes semi-transparent and **click-through** — your mouse acts like the mirror isn't there. Watch the video *and* click the button underneath it. An accent border shows when a mirror is in ghost mode; press <kbd>⌥⌘G</kbd> again to make it solid.
 
-Need to move or resize a ghosted mirror? **Hold <kbd>⌥</kbd>** — while held, the mirror catches the mouse again and its controls appear, so you can drag it, resize it, or click the eye icon to unghost it. Release <kbd>⌥</kbd> and it's click-through again. A hint appears on the mirror the moment it enters ghost mode, so there's nothing to memorize.
+Every mirror carries a small **eye badge on its top-right corner** that toggles click-through with one click — dark when the mirror is solid, accent-colored when it's ghosted. On a ghosted mirror the badge is the one spot that stays clickable, so you're never locked out: tap it, and the mirror turns solid for dragging and resizing. A hint appears the moment a mirror enters ghost mode, so there's nothing to memorize.
 
 ### Size and opacity
 
@@ -148,6 +151,19 @@ The one trade-off: the mirror is view-only. To interact with the pinned window �
 
 ---
 
+## Why does GhostPin need Screen Recording access?
+
+Because of how the mirror works. macOS does not allow one app to move another app's window on top, so GhostPin instead *displays a live copy* of the window's pixels — and reading the pixels of other apps' windows is exactly what macOS classifies as "screen recording." There is no narrower permission Apple could grant for this; every window-pinning app in this category requires the same one.
+
+What the permission is used for — and what it is not:
+
+- **Nothing is recorded.** Captured frames travel from Apple's ScreenCaptureKit straight to your screen, live in memory only, and are discarded immediately. Nothing is ever written to disk.
+- **Nothing is sent anywhere.** GhostPin contains no networking code at all — it runs entirely offline and *cannot* upload, sync, or phone home. No analytics, no telemetry, no update pings.
+- **No audio is captured.** On recent macOS the prompt is titled "Screen & System Audio Recording" — that's Apple's combined name for the single permission, and apps can't change the dialog's wording. GhostPin's capture stream is video-only; audio capture is never enabled.
+- **You don't have to take our word for it.** The complete source code is in this repository — including every line that touches the capture stream — and you can [build the app yourself](#build-from-source) in under a minute.
+
+---
+
 ## Build from source
 
 No Xcode required — just the Command Line Tools.
@@ -187,7 +203,7 @@ GhostPin runs entirely on your Mac and contains no networking code. Captured fra
 
 - The mirror is **view-only** — interact with the original window, not the mirror
 - DRM-protected content (Netflix, Apple TV+) may render black in the mirror, as it does in all screen capture
-- Ghost mode makes the mirror's own controls unreachable while active — hold <kbd>⌥</kbd> to reach them, or press <kbd>⌥⌘G</kbd> to toggle back
+- Ghost mode makes the mirror's surface untouchable while active — use the corner eye badge or <kbd>⌥⌘G</kbd> to toggle back
 
 ---
 

@@ -76,19 +76,6 @@ final class MirrorView: NSView {
         }
     }
 
-    /// Option is held while ghosted: reveal the controls so the mirror can be
-    /// manipulated; hide them again on release.
-    func setInteractionOverride(_ active: Bool) {
-        layer?.borderColor = active
-            ? NSColor.controlAccentColor.cgColor
-            : NSColor.controlAccentColor.withAlphaComponent(0.85).cgColor
-        NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.15
-            controlStrip.animator().alphaValue = active ? 1 : 0
-            resizeGrip.animator().alphaValue = active ? 1 : 0
-        }
-    }
-
     // MARK: - Hint overlay
 
     private func setUpHint() {
