@@ -93,6 +93,16 @@ GhostPin has no network code at all. Frames go from ScreenCaptureKit straight to
 > [!IMPORTANT]
 > GhostPin is not yet notarized by Apple (that requires a paid developer account), so macOS will warn you on first open. The steps below get you through it — or skip the download entirely and [build from source](#build-from-source) in under a minute.
 
+### Install with Homebrew
+
+```bash
+brew install --cask aadhilfarhan/tap/ghostpin
+```
+
+One command, and Homebrew verifies the download's checksum for you automatically. Steps 4–5 below (allowing the app and granting Screen Recording) still apply on first open. Updating later is `brew upgrade --cask ghostpin`.
+
+The steps below cover the direct download instead.
+
 ### Step 1: Download
 
 [Download GhostPin.dmg](https://github.com/AadhilFarhan/GhostPin/releases/latest/download/GhostPin.dmg) — this link always fetches the newest release. Release notes live on the [releases page](https://github.com/AadhilFarhan/GhostPin/releases).

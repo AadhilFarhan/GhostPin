@@ -204,6 +204,15 @@
   .how strong { color: var(--text); }
 
   /* Install */
+  .brew-line { text-align: center; margin: -24px 0 36px; color: var(--text-dim); font-size: .95rem; }
+  .brew-line code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: .85em;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 8px;
+  }
   .steps { max-width: 620px; margin: 0 auto; counter-reset: step; }
   .step {
     display: flex; gap: 16px;
@@ -353,6 +362,7 @@
     <div class="wrap">
       <h2>Install in two minutes</h2>
       <p class="lede">GhostPin isn't notarized by Apple yet, so first launch takes one extra step.</p>
+      <p class="brew-line">Homebrew user? <code>brew install --cask aadhilfarhan/tap/ghostpin</code> — then skip to step 2.</p>
       <div class="steps">
         <div class="step">
           <div class="num"></div>
