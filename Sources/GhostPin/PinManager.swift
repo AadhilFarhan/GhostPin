@@ -6,6 +6,8 @@ final class PinManager {
 
     private(set) var sessions: [PinSession] = []
     private(set) var ghostAll = false
+    private var modifierTimer: Timer?
+    private var optionHeld = false
 
     func isPinned(_ windowID: CGWindowID) -> Bool {
         sessions.contains { $0.windowID == windowID }
@@ -35,6 +37,10 @@ final class PinManager {
                 let session = PinSession(scWindow: scWindow, cascadeIndex: self.sessions.count)
                 session.onClosed = { [weak self] closedSession in
                     self?.sessions.removeAll { $0 === closedSession }
+                    self?.refreshModifierWatcher()
+                }
+                session.onGhostChanged = { [weak self] in
+                    self?.refreshModifierWatcher()
                 }
                 if self.ghostAll { session.setGhost(true) }
                 self.sessions.append(session)
@@ -45,6 +51,33 @@ final class PinManager {
     func toggleGhost(windowID: CGWindowID) {
         guard let session = sessions.first(where: { $0.windowID == windowID }) else { return }
         session.setGhost(!session.isGhost)
+    }
+
+    // While any mirror is ghosted, watch the hardware modifier state; holding
+    // Option temporarily lifts click-through so the mirror can be manipulated.
+    // NSEvent.modifierFlags is readable without any TCC permission.
+    private func refreshModifierWatcher() {
+        let anyGhost = sessions.contains { $0.isGhost }
+        if anyGhost, modifierTimer == nil {
+            let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+                self?.pollModifiers()
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            modifierTimer = timer
+        } else if !anyGhost {
+            modifierTimer?.invalidate()
+            modifierTimer = nil
+            optionHeld = false
+        }
+    }
+
+    private func pollModifiers() {
+        let held = NSEvent.modifierFlags.contains(.option) && !NSEvent.modifierFlags.contains(.command)
+        guard held != optionHeld else { return }
+        optionHeld = held
+        for session in sessions where session.isGhost {
+            session.setInteractionOverride(held)
+        }
     }
 
     func unpinAll() {
