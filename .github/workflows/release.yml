@@ -1,0 +1,35 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stamp version from tag
+        run: /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${GITHUB_REF_NAME#v}" Support/Info.plist
+
+      - name: Build app bundle
+        run: ./scripts/build-app.sh
+
+      - name: Package DMG and checksum
+        run: |
+          mkdir staging
+          cp -R dist/GhostPin.app staging/
+          ln -s /Applications staging/Applications
+          hdiutil create -volname "GhostPin" -srcfolder staging -ov -format UDZO dist/GhostPin.dmg
+          cd dist && shasum -a 256 GhostPin.dmg > GhostPin.dmg.sha256
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/GhostPin.dmg dist/GhostPin.dmg.sha256 \
+            --title "GhostPin ${GITHUB_REF_NAME#v}" --generate-notes
