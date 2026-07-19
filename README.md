@@ -20,7 +20,7 @@
 </p>
 
   <p>
-    <a href="https://github.com/AadhilFarhan/GhostPin/releases/latest"><b>Download</b></a>
+    <a href="https://github.com/AadhilFarhan/GhostPin/releases/latest/download/GhostPin.dmg"><b>Download</b></a>
     &nbsp;·&nbsp;
     <a href="https://aadhilfarhan.github.io/GhostPin/">Website</a>
     &nbsp;·&nbsp;
@@ -77,7 +77,7 @@ GhostPin has no network code at all. Frames go from ScreenCaptureKit straight to
 
 <div align="center">
 
-<a href="https://github.com/AadhilFarhan/GhostPin/releases/latest"><img src="https://img.shields.io/badge/download-GhostPin-2EA043?style=flat&logo=apple&logoColor=white" alt="Download GhostPin" /></a>
+<a href="https://github.com/AadhilFarhan/GhostPin/releases/latest/download/GhostPin.dmg"><img src="https://img.shields.io/badge/download-GhostPin-2EA043?style=flat&logo=apple&logoColor=white" alt="Download GhostPin" /></a>
 
 </div>
 
@@ -90,15 +90,15 @@ GhostPin has no network code at all. Frames go from ScreenCaptureKit straight to
 
 ### Step 1: Download
 
-Grab the `.dmg` from the [latest release](https://github.com/AadhilFarhan/GhostPin/releases/latest).
+[Download GhostPin.dmg](https://github.com/AadhilFarhan/GhostPin/releases/latest/download/GhostPin.dmg) — this link always fetches the newest release. Release notes live on the [releases page](https://github.com/AadhilFarhan/GhostPin/releases).
 
 ### Step 2: Verify your download (optional but recommended)
 
-Each release includes a `.dmg.sha256` checksum file. Download both files into the same folder, then:
+Each release includes a `.dmg.sha256` checksum file ([download it here](https://github.com/AadhilFarhan/GhostPin/releases/latest/download/GhostPin.dmg.sha256)). With both files in the same folder:
 
 ```bash
 cd ~/Downloads
-shasum -a 256 -c GhostPin-*.dmg.sha256
+shasum -a 256 -c GhostPin.dmg.sha256
 ```
 
 A result ending in `OK` means your download is byte-for-byte the published release.
