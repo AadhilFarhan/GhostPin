@@ -65,6 +65,7 @@ final class PinSession: NSObject {
         panel.minSize = CGSize(width: 160, height: 160 / sourceAspect)
         panel.contentView = mirrorView
         mirrorView.delegate = self
+        mirrorView.sourceAspect = sourceAspect
 
         panel.orderFrontRegardless()
         startCapture(scWindow: scWindow)
@@ -125,6 +126,10 @@ final class PinSession: NSObject {
     private func updateAspectIfNeeded(_ aspect: CGFloat) {
         guard abs(aspect - sourceAspect) > 0.01 else { return }
         sourceAspect = aspect
+        mirrorView.sourceAspect = aspect
+        // A zero aspect ratio means the user Shift-resized to a free shape; track
+        // the source's aspect but stop snapping the panel to it.
+        guard panel.contentAspectRatio != .zero else { return }
         panel.contentAspectRatio = CGSize(width: aspect, height: 1)
         panel.minSize = CGSize(width: 160, height: 160 / aspect)
         var frame = panel.frame
