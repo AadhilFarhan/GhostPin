@@ -24,6 +24,7 @@ final class PinSession: NSObject {
     private var closed = false
 
     var onClosed: ((PinSession) -> Void)?
+    var onGhostChanged: (() -> Void)?
 
     init(scWindow: SCWindow, cascadeIndex: Int) {
         windowID = scWindow.windowID
@@ -112,6 +113,17 @@ final class PinSession: NSObject {
         panel.ignoresMouseEvents = on
         panel.alphaValue = on ? min(baseAlpha, 0.65) : baseAlpha
         mirrorView.setGhostAppearance(on)
+        if on { mirrorView.flashHint("Hold ⌥ to interact  ·  ⌥⌘G to unghost") }
+        onGhostChanged?()
+    }
+
+    /// While ghosted, temporarily lifts click-through (Option held) so the
+    /// mirror can be moved, resized, or unghosted from its controls.
+    func setInteractionOverride(_ active: Bool) {
+        guard isGhost else { return }
+        panel.ignoresMouseEvents = !active
+        panel.alphaValue = active ? min(baseAlpha, 0.9) : min(baseAlpha, 0.65)
+        mirrorView.setInteractionOverride(active)
     }
 
     func close() {

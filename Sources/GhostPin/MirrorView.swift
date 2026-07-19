@@ -17,6 +17,9 @@ final class MirrorView: NSView {
     private let resizeGrip = ResizeGripView()
     private let opacitySlider = NSSlider(value: 1.0, minValue: 0.25, maxValue: 1.0, target: nil, action: nil)
     private var trackingArea: NSTrackingArea?
+    private let hintContainer = NSView()
+    private let hintLabel = NSTextField(labelWithString: "")
+    private var hintDismissal: DispatchWorkItem?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -46,6 +49,8 @@ final class MirrorView: NSView {
         doubleClick.numberOfClicksRequired = 2
         doubleClick.delaysPrimaryMouseButtonEvents = false
         addGestureRecognizer(doubleClick)
+
+        setUpHint()
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -69,6 +74,60 @@ final class MirrorView: NSView {
             controlStrip.alphaValue = 0
             resizeGrip.alphaValue = 0
         }
+    }
+
+    /// Option is held while ghosted: reveal the controls so the mirror can be
+    /// manipulated; hide them again on release.
+    func setInteractionOverride(_ active: Bool) {
+        layer?.borderColor = active
+            ? NSColor.controlAccentColor.cgColor
+            : NSColor.controlAccentColor.withAlphaComponent(0.85).cgColor
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.15
+            controlStrip.animator().alphaValue = active ? 1 : 0
+            resizeGrip.animator().alphaValue = active ? 1 : 0
+        }
+    }
+
+    // MARK: - Hint overlay
+
+    private func setUpHint() {
+        hintContainer.wantsLayer = true
+        hintContainer.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.72).cgColor
+        hintContainer.layer?.cornerRadius = 7
+        hintContainer.alphaValue = 0
+        hintLabel.font = .systemFont(ofSize: 11, weight: .medium)
+        hintLabel.textColor = .white
+        hintLabel.alignment = .center
+        hintLabel.translatesAutoresizingMaskIntoConstraints = false
+        hintContainer.translatesAutoresizingMaskIntoConstraints = false
+        hintContainer.addSubview(hintLabel)
+        addSubview(hintContainer)
+        NSLayoutConstraint.activate([
+            hintLabel.leadingAnchor.constraint(equalTo: hintContainer.leadingAnchor, constant: 10),
+            hintLabel.trailingAnchor.constraint(equalTo: hintContainer.trailingAnchor, constant: -10),
+            hintLabel.topAnchor.constraint(equalTo: hintContainer.topAnchor, constant: 5),
+            hintLabel.bottomAnchor.constraint(equalTo: hintContainer.bottomAnchor, constant: -5),
+            hintContainer.centerXAnchor.constraint(equalTo: centerXAnchor),
+            hintContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10),
+        ])
+    }
+
+    func flashHint(_ text: String) {
+        hintDismissal?.cancel()
+        hintLabel.stringValue = text
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.2
+            hintContainer.animator().alphaValue = 1
+        }
+        let dismissal = DispatchWorkItem { [weak self] in
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.6
+                self?.hintContainer.animator().alphaValue = 0
+            }
+        }
+        hintDismissal = dismissal
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: dismissal)
     }
 
     // MARK: - Control strip
