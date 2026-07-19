@@ -148,6 +148,19 @@ The one trade-off: the mirror is view-only. To interact with the pinned window �
 
 ---
 
+## Why does GhostPin need Screen Recording access?
+
+Because of how the mirror works. macOS does not allow one app to move another app's window on top, so GhostPin instead *displays a live copy* of the window's pixels — and reading the pixels of other apps' windows is exactly what macOS classifies as "screen recording." There is no narrower permission Apple could grant for this; every window-pinning app in this category requires the same one.
+
+What the permission is used for — and what it is not:
+
+- **Nothing is recorded.** Captured frames travel from Apple's ScreenCaptureKit straight to your screen, live in memory only, and are discarded immediately. Nothing is ever written to disk.
+- **Nothing is sent anywhere.** GhostPin contains no networking code at all — it runs entirely offline and *cannot* upload, sync, or phone home. No analytics, no telemetry, no update pings.
+- **No audio is captured.** On recent macOS the prompt is titled "Screen & System Audio Recording" — that's Apple's combined name for the single permission, and apps can't change the dialog's wording. GhostPin's capture stream is video-only; audio capture is never enabled.
+- **You don't have to take our word for it.** The complete source code is in this repository — including every line that touches the capture stream — and you can [build the app yourself](#build-from-source) in under a minute.
+
+---
+
 ## Build from source
 
 No Xcode required — just the Command Line Tools.
