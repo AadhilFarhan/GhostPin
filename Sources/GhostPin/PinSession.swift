@@ -69,6 +69,11 @@ final class PinSession: NSObject {
         mirrorView.sourceAspect = sourceAspect
 
         panel.orderFrontRegardless()
+        updateBadge()
+        NotificationCenter.default.addObserver(self, selector: #selector(panelFrameChanged),
+                                               name: NSWindow.didResizeNotification, object: panel)
+        NotificationCenter.default.addObserver(self, selector: #selector(panelFrameChanged),
+                                               name: NSWindow.didMoveNotification, object: panel)
         startCapture(scWindow: scWindow)
     }
 
@@ -113,30 +118,40 @@ final class PinSession: NSObject {
         panel.ignoresMouseEvents = on
         panel.alphaValue = on ? min(baseAlpha, 0.65) : baseAlpha
         mirrorView.setGhostAppearance(on)
+        updateBadge()
         if on {
-            showBadge()
             mirrorView.flashHint("Click-through on — tap the eye badge or ⌥⌘G to turn off")
-        } else {
-            hideBadge()
         }
     }
 
     // MARK: - Ghost badge
-    // The ghosted panel ignores every mouse event, so its escape hatch lives in
-    // a separate tiny child window that stays clickable.
+    // A ghosted panel ignores every mouse event, so the click-through toggle
+    // lives in a separate tiny child window that always stays clickable.
 
-    private func showBadge() {
-        if badge == nil { badge = makeBadge() }
-        guard let badge else { return }
-        badge.setFrameOrigin(NSPoint(x: panel.frame.maxX - 22, y: panel.frame.maxY - 22))
-        panel.addChildWindow(badge, ordered: .above)
-        badge.orderFront(nil)
+    private func updateBadge() {
+        if badge == nil {
+            let badge = makeBadge()
+            self.badge = badge
+            panel.addChildWindow(badge, ordered: .above)
+        }
+        positionBadge()
+        if let button = badge?.contentView as? NSButton {
+            button.image = NSImage(systemSymbolName: isGhost ? "eye.fill" : "eye.slash",
+                                   accessibilityDescription: isGhost ? "Turn off click-through" : "Turn on click-through")
+            button.layer?.backgroundColor = isGhost
+                ? NSColor.controlAccentColor.cgColor
+                : NSColor(calibratedWhite: 0.22, alpha: 0.92).cgColor
+            button.toolTip = isGhost ? "Turn off click-through (⌥⌘G)" : "Turn on click-through (⌥⌘G)"
+        }
+        badge?.orderFront(nil)
     }
 
-    private func hideBadge() {
-        guard let badge else { return }
-        panel.removeChildWindow(badge)
-        badge.orderOut(nil)
+    private func positionBadge() {
+        badge?.setFrameOrigin(NSPoint(x: panel.frame.maxX - 22, y: panel.frame.maxY - 22))
+    }
+
+    @objc private func panelFrameChanged(_ note: Notification) {
+        positionBadge()
     }
 
     private func makeBadge() -> NSPanel {
@@ -155,12 +170,9 @@ final class PinSession: NSObject {
         let button = NSButton(frame: NSRect(x: 0, y: 0, width: size, height: size))
         button.isBordered = false
         button.bezelStyle = .regularSquare
-        button.image = NSImage(systemSymbolName: "eye.fill", accessibilityDescription: "Turn off click-through")
         button.contentTintColor = .white
         button.wantsLayer = true
-        button.layer?.backgroundColor = NSColor.controlAccentColor.cgColor
         button.layer?.cornerRadius = size / 2
-        button.toolTip = "Turn off click-through (⌥⌘G)"
         button.target = self
         button.action = #selector(badgeTapped)
         badge.contentView = button
@@ -168,15 +180,19 @@ final class PinSession: NSObject {
     }
 
     @objc private func badgeTapped() {
-        setGhost(false)
+        setGhost(!isGhost)
     }
 
     func close() {
         guard !closed else { return }
         closed = true
+        NotificationCenter.default.removeObserver(self)
         stream?.stopCapture()
         stream = nil
-        hideBadge()
+        if let badge {
+            panel.removeChildWindow(badge)
+            badge.orderOut(nil)
+        }
         panel.orderOut(nil)
         onClosed?(self)
     }
