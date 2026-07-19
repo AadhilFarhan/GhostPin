@@ -33,3 +33,19 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" dist/GhostPin.dmg dist/GhostPin.dmg.sha256 \
             --title "GhostPin ${GITHUB_REF_NAME#v}" --generate-notes
+
+      - name: Update Homebrew tap
+        if: ${{ secrets.TAP_GITHUB_TOKEN != '' }}
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          SHA=$(awk '{print $1}' dist/GhostPin.dmg.sha256)
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/AadhilFarhan/homebrew-tap.git" tap
+          cd tap
+          sed -i '' -E "s|version \"[^\"]+\"|version \"${VERSION}\"|" Casks/ghostpin.rb
+          sed -i '' -E "s|sha256 \"[^\"]+\"|sha256 \"${SHA}\"|" Casks/ghostpin.rb
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -am "ghostpin ${VERSION}"
+          git push
