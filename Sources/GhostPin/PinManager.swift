@@ -42,6 +42,11 @@ final class PinManager {
         }
     }
 
+    func toggleGhost(windowID: CGWindowID) {
+        guard let session = sessions.first(where: { $0.windowID == windowID }) else { return }
+        session.setGhost(!session.isGhost)
+    }
+
     func unpinAll() {
         for session in sessions { session.close() }
         ghostAll = false

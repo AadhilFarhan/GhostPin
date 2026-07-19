@@ -52,6 +52,7 @@ final class MirrorView: NSView {
     func setGhostAppearance(_ ghost: Bool) {
         layer?.borderWidth = ghost ? 2 : 0
         layer?.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.85).cgColor
+        if ghost { controlStrip.alphaValue = 0 }
     }
 
     // MARK: - Control strip
