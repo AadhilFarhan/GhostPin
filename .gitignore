@@ -1,6 +1,10 @@
 .build/
 dist/
+staging/
 *.dmg
 *.dmg.sha256
+*.p12
+*.pem
+*.keychain-db
 .DS_Store
 .swiftpm/
