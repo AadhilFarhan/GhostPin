@@ -31,8 +31,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/GhostPin.dmg dist/GhostPin.dmg.sha256 \
-            --title "GhostPin ${GITHUB_REF_NAME#v}" --generate-notes
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/GhostPin.dmg dist/GhostPin.dmg.sha256 --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/GhostPin.dmg dist/GhostPin.dmg.sha256 \
+              --title "GhostPin ${GITHUB_REF_NAME#v}" --generate-notes
+          fi
 
       - name: Update Homebrew tap
         env:
@@ -48,6 +52,10 @@ jobs:
           cd tap
           sed -i '' -E "s|version \"[^\"]+\"|version \"${VERSION}\"|" Casks/ghostpin.rb
           sed -i '' -E "s|sha256 \"[^\"]+\"|sha256 \"${SHA}\"|" Casks/ghostpin.rb
+          if git diff --quiet; then
+            echo "Cask already at ${VERSION}; nothing to push"
+            exit 0
+          fi
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
               commit -am "ghostpin ${VERSION}"
