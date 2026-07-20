@@ -75,6 +75,13 @@ final class PinSession: NSObject {
                                                name: NSWindow.didResizeNotification, object: panel)
         NotificationCenter.default.addObserver(self, selector: #selector(panelFrameChanged),
                                                name: NSWindow.didMoveNotification, object: panel)
+    }
+
+    /// Starts capture. Split from `init` so the caller can wire `onClosed`
+    /// and record this session as pinned first — capture can fail
+    /// synchronously and call `close()`, which must not fire `onClosed`
+    /// before anything is listening.
+    func start(scWindow: SCWindow) {
         startCapture(scWindow: scWindow)
     }
 
@@ -260,7 +267,8 @@ extension PinSession: SCStreamOutput, SCStreamDelegate {
         var contentsRect: CGRect?
         var aspect: CGFloat?
         if let rectValue = info[.contentRect],
-           let rect = CGRect(dictionaryRepresentation: rectValue as! CFDictionary),
+           CFGetTypeID(rectValue as CFTypeRef) == CFDictionaryGetTypeID(),
+           let rect = CGRect(dictionaryRepresentation: (rectValue as CFTypeRef) as! CFDictionary),
            let scaleFactor = info[.scaleFactor] as? CGFloat,
            rect.width > 1, rect.height > 1 {
             let bufferWidth = CGFloat(CVPixelBufferGetWidth(pixelBuffer))
