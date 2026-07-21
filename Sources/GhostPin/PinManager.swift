@@ -6,9 +6,10 @@ final class PinManager {
 
     private(set) var sessions: [PinSession] = []
     private(set) var ghostAll = false
+    private var pinningInFlight = Set<CGWindowID>()
 
     func isPinned(_ windowID: CGWindowID) -> Bool {
-        sessions.contains { $0.windowID == windowID }
+        sessions.contains { $0.windowID == windowID } || pinningInFlight.contains(windowID)
     }
 
     /// Pins the window, or unpins it if already pinned.
@@ -17,13 +18,16 @@ final class PinManager {
             existing.close()
             return
         }
+        guard !pinningInFlight.contains(windowID) else { return }
         guard CGPreflightScreenCaptureAccess() else {
             PermissionHelper.promptForScreenRecording()
             return
         }
+        pinningInFlight.insert(windowID)
         SCShareableContent.getExcludingDesktopWindows(true, onScreenWindowsOnly: true) { [weak self] content, error in
             DispatchQueue.main.async {
                 guard let self else { return }
+                self.pinningInFlight.remove(windowID)
                 guard let scWindow = content?.windows.first(where: { $0.windowID == windowID }) else {
                     if let error {
                         NSLog("GhostPin: shareable content error: \(error.localizedDescription)")
@@ -34,10 +38,13 @@ final class PinManager {
                 }
                 let session = PinSession(scWindow: scWindow, cascadeIndex: self.sessions.count)
                 session.onClosed = { [weak self] closedSession in
-                    self?.sessions.removeAll { $0 === closedSession }
+                    guard let self else { return }
+                    self.sessions.removeAll { $0 === closedSession }
+                    if self.sessions.isEmpty { self.ghostAll = false }
                 }
                 if self.ghostAll { session.setGhost(true) }
                 self.sessions.append(session)
+                session.start(scWindow: scWindow)
             }
         }
     }
